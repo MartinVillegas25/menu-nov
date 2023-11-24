@@ -7,6 +7,7 @@ const nuevoValoresEmail = require('../templateEmail/nuevoplanEmail');
 const cancelarSuscripcion = require('../templateEmail/CancerlarPlan');
 
 
+
 // const createTrans = ()=>{
 //   // const transport = nodemailer.createTransport({
 //   //   host: "sandbox.smtp.mailtrap.io",
@@ -119,7 +120,7 @@ function nuevoValoresCorreo(correo, standard, premium){
 function cancelarsuscripcion(correo){
   transporter.sendMail({
     from: "martinvillegas90@hotmail.com", // verified sender email
-    to: "contacto@simesero.com", // recipient email
+    to: correo, // recipient email
     subject: "Cancelacion de suscripcion", // Subject line
     text: correo + "quiere cancelar la suscripcion", // plain text body
     html: cancelarSuscripcion(correo), // html body
@@ -133,12 +134,31 @@ function cancelarsuscripcion(correo){
   });
 }
 
+function nuevaPassword(token, correo){
+  transporter.sendMail({
+    from: "martinvillegas90@hotmail.com", // verified sender email
+    to: correo, // recipient email
+    subject: "Solicitud nueva Contraseña", // Subject line
+    text: correo + " Configure su nueva contraseña", // plain text body
+    html: mailClave(token), // html body
+  }, function(error, info){
+    if (error) {
+      console.log(error);
+    } else {
+      
+      console.log('Email sent: ' + info.response);
+    }
+  });
+}
+
+
 module.exports = {
   sendEmail,
   confirmarPago,
   confirmarPlan,
   nuevoValoresCorreo,
-  cancelarsuscripcion
+  cancelarsuscripcion,
+  nuevaPassword
 }
 
 

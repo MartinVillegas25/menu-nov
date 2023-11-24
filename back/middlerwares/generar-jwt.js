@@ -21,6 +21,30 @@ const generarJWT = (email)=>{
 
     })
 }
+const generarJWTPassword = (email)=>{
+    return new Promise((resolve, reject)=>{
+        const payload = {email};
 
-module.exports = generarJWT;
+    jwt.sign(payload, process.env.SECRETORPUBLIC_KEY, 
+        {
+            expiresIn: '30m'
+        },
+        (err, token)=>{
+            if (err){
+                console.error(err);
+                reject('Error signing');
+            }
+            else{
+                resolve(token);
+            }
+        }
+    );
+
+    })
+}
+
+module.exports = {
+    generarJWT,
+    generarJWTPassword
+};
 

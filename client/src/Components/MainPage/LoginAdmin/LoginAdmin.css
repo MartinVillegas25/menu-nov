@@ -5,6 +5,7 @@
 	justify-content: center;
 	padding: 0px 10px 50px;
 	text-align: center;
+	background-color: #000;
 }
 
 div.form-loginadmin {
@@ -18,6 +19,11 @@ div.login-img-container {
 	height: 100px;
 	width: 350px;
 	margin: 0 auto 20px;
+}
+@media only screen and (max-width: 768px) {
+	div.login-img-container {
+		margin: auto;
+	}
 }
 h2.h2-login {
 	display: flex;

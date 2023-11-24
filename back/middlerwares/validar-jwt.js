@@ -17,32 +17,32 @@ const logout = (req, res) => {
 };
 
 const validarJWT = async (req, res = response, next) => {
-	const token = req.header('x-token');
+	// const token = req.header('x-token');
 
-	const tokenListaNegra = req.header('x-token').split(' ')[1];
+	// const tokenListaNegra = req.header('x-token').split(' ')[1];
 
-	// Verificar si el token está en la lista negra
-	if (revokedTokens.has(tokenListaNegra)) {
-		return res
-			.status(401)
-			.json({ message: 'Token revoked. Please log in again.' });
-	}
+	// // Verificar si el token está en la lista negra
+	// if (revokedTokens.has(tokenListaNegra)) {
+	// 	return res
+	// 		.status(401)
+	// 		.json({ message: 'Token revoked. Please log in again.' });
+	// }
 
-	if (!token) {
-		return res.status(401).redirect('/');
-	}
+	// if (!token) {
+	// 	return res.status(401).redirect('/');
+	// }
 
-	try {
-		const { email } = jwt.verify(token, process.env.SECRETORPUBLIC_KEY);
-		console.log(email);
-		req.email = email;
+	// try {
+	// 	const { email } = jwt.verify(token, process.env.SECRETORPUBLIC_KEY);
+	// 	console.log(email);
+	// 	req.email = email;
 
-		next();
-	} catch (error) {
-		console.error(error);
-		res.status(401).redirect('/');
-		console.error('token no valido');
-	}
+	// 	next();
+	// } catch (error) {
+	// 	console.error(error);
+	// 	res.status(401).redirect('/');
+	// 	console.error('token no valido');
+	// }
 
 	console.log(token);
 };

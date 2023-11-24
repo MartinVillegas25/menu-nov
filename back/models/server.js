@@ -4,7 +4,7 @@ const fileUpload = require('express-fileupload');
 const morgan = require('morgan');
 
 const { socketController } = require('../sockets/controller');
-const path = require('path');
+const {path, join} = require('path');
 
 class Server {
 	constructor() {
@@ -28,7 +28,7 @@ class Server {
 	middelewares() {
 
 		//directorio static
-		this.app.use(express.static('public'));
+		this.app.use(express.static(join(__dirname, '..','../client/dist/')));
 
 		this.app.use(cors());
 		this.app.use(morgan('dev'));

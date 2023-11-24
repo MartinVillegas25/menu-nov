@@ -27,7 +27,9 @@ const {
 	cambiarImagenLocal,
 	mostrarUsuarioConfirmarPlan,
 	getChatLocal,
-	cancelarPlan
+	cancelarPlan,
+	postEmailExistenteAdmin,
+	postEmailExistentelocal
 } = require('../controllers/routers');
 
 const { check } = require('express-validator');
@@ -68,11 +70,21 @@ router.put('/admin/confirmar-pago', [validarJWT, adminRol], confimarPago);
 
 //rutas despues del pago
 router.get('/gracias', gracias);
-// router.post("/webhook", receiveWebhook);
+
+
 //mostrar usuario a confirmar
 router.get('/confirmar', mostrarUsuarioConfirmar);
 //mostrar usuario para confirmar plan
 router.get('/confimar-plan', mostrarUsuarioConfirmarPlan);
+
+//post comprobar emails antes del post de nuevo usuario
+router.post('/validar-email-admin',[
+	check('email', 'correo no valido').isEmail(),	
+],postEmailExistenteAdmin );
+router.post('/validar-email-local',[
+	check('email', 'correo no valido').isEmail(),	
+],postEmailExistentelocal );
+
 
 //ruta get para crear administrador
 router.get('/admin-boss', loginAdminGet);
@@ -118,10 +130,10 @@ router.post(
 	],
 	postUsuario
 );
-router.post('/save-password', recuperarClave);
 
 //ruta actualizacion clave
-router.put('/new-password', newPassword);
+router.post('/save-password', recuperarClave);
+router.put('/new-password',[validarJWT], newPassword);
 //actualizacion de datos
 router.put('/actualizar', [validarJWT], actualizarDatos);
 

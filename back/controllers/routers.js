@@ -2,9 +2,9 @@ const { response } = require('express');
 const bcrypt = require('bcryptjs');
 const pool = require('../database');
 const { validationResult } = require('express-validator');
-const generarJWT = require('../middlerwares/generar-jwt');
+const {generarJWT, generarJWTPassword} = require('../middlerwares/generar-jwt');
 const emailer = require('./nodemailer');
-
+const path = require('path');
 const fs = require('fs-extra');
 
 //controllers y services payments
@@ -12,6 +12,7 @@ const fs = require('fs-extra');
 
 // const PaymentService = require("../services/paymentServices");
 const {
+	nuevaPassword,
 	sendEmail,
 	confirmarPlan,
 	confirmarPago,
@@ -28,7 +29,7 @@ const homeGet = (req, res = response) => {
 };
 //get de la pagina de agregar cuenta como administrador
 const loginAdminGet = (req, res = response) => {
-	res.json('get admin login');
+	res.sendFile(path.join(__dirname, '..','../client/dist/admin-boss.html'));
 };
 //ruta POST  crear cuenta administrador
 
@@ -80,6 +81,74 @@ const postCrearAdmin = async (req, res = response) => {
 	}
 };
 
+
+//post validad email existente admin
+const postEmailExistenteAdmin = async (req, res = response) => {
+	const error = validationResult(req);
+	if (!error.isEmpty()) {
+		return res.status(400).send(error);
+	}
+
+	let { email} = req.body;
+
+	//verificar si el correo existe
+	const searchEmail =
+		'SELECT COUNT(*) AS count FROM administradores WHERE email = ?';
+	
+
+	try {
+		const result = await pool.query(searchEmail, [email]);
+
+		if (result[0][0].count > 0) {
+			return res.status(200).json({ msg: `email existente` });
+		}else{
+			return res.status(200).json({msg:'Ok'})
+		}
+	} catch (error) {
+		console.log(error);
+		res.status(400).send('error server');
+	}
+};
+//post validad email existente local
+const postEmailExistentelocal = async (req, res = response) => {
+	const error = validationResult(req);
+	if (!error.isEmpty()) {
+		return res.status(400).send(error);
+	}
+
+	let { email } = req.body;
+
+	//verificar si el correo existe
+	const searchEmail = 'SELECT COUNT(*) AS count FROM usuarios WHERE email = ?';
+
+	//verificar si el correo existe en admins
+	const searchEmailAdmin =
+		'SELECT COUNT(*) AS count FROM administradores WHERE email = ?';
+	
+	
+
+	try {
+		const result = await pool.query(searchEmail, [email]);
+		const resultadmin = await pool.query(searchEmailAdmin, [email]);
+
+		if (result[0][0].count > 0) {
+			return res.status(200).json({
+				msg: `existente`
+			});
+		}
+		if (resultadmin[0][0].count > 0) {
+			return res.status(200).json({ msg: `existente` });
+		}
+		else{
+			return res.status(200).json({msg:'Ok'})
+		}
+
+	} catch (error) {
+		console.log(error);
+		res.status(500).send('error server');
+	}
+};
+
 //ruta post del usuario, validad usuario antes de entrar al dashboard del local o administrador
 const loginUsuario = async (req, res = response) => {
 	const error = validationResult(req);
@@ -98,6 +167,11 @@ const loginUsuario = async (req, res = response) => {
 
 	if (resultEmailRegistrado[0].length > 0) {
 		const emailReg = resultEmailRegistrado[0][0];
+		if (resultEmailRegistrado[0].length > 0 && emailReg.status == 0) {
+			return res.status(200).json({
+				msg: `suspendido`
+			});
+		}
 		if (resultEmailRegistrado[0].length > 0 && emailReg.pagoConfirmado == 0) {
 			return res.status(200).json({
 				msg: `pago`
@@ -160,49 +234,7 @@ const loginUsuario = async (req, res = response) => {
 	}
 };
 
-//payment de  mercado pago
-
-// class PaymentController {
-//     constructor(subscriptionService) {
-//       this.subscriptionService = subscriptionService;
-//     }
-
-//     async getSubscriptionLink(req, res) {
-
-//       const {email, plan} = req.body;
-
-//       try {
-//         const query2 = 'SELECT * FROM planes'
-//         const planesActulizados = await pool.query(query2)
-
-//         console.log("estado 1" , planesActulizados)
-//         let valor = 0;
-//           if (plan === 'standard'){
-//             valor= planesActulizados[0][0].standard;
-//         }else if( plan==='premium'){
-//             valor= planesActulizados[0][0].premium;
-//         }else{
-//             valor=0;
-//         }
-
-//         const subscription = await this.subscriptionService.createSubscription(email, valor);
-
-//         console.log("estado2 ", subscription.init_point)
-//         return res.json(subscription.init_point);
-//       } catch (error) {
-//         console.log( "estado 3", error);
-
-//         return res
-//           .status(500)
-//           .json({ error: true, msg: "Failed to create subscription" });
-//       }
-//     }
-//   }
-
-//   const PaymentInstance = new PaymentController(new PaymentService());
-
-//ruta para guardar un nuevo usuario
-
+//ruta crear usuario
 const postUsuario = async (req, res = response) => {
 	const error = validationResult(req);
 	if (!error.isEmpty()) {
@@ -245,10 +277,17 @@ const postUsuario = async (req, res = response) => {
 
 	if (result[0][0].count > 0) {
 		return res.status(404).json({
-			message: `El usuario con el email: ${email} ya esta registrado`
+			message: `existente`
 		});
 	}
+	//verificar si el correo existe en admins
+	const searchEmailAdmin =
+		'SELECT COUNT(*) AS count FROM administradores WHERE email = ?';
+	const resultadmin = await pool.query(searchEmailAdmin, [email]);
 
+	if (resultadmin[0][0].count > 0) {
+		return res.status(200).json({ msg: `existente` });
+	}
 	//agregar imagen
 	if (req.files) {
 		const { tempFilePath } = req.files.img;
@@ -291,7 +330,9 @@ const postUsuario = async (req, res = response) => {
 			tipo,
 			comentario
 		]);
-
+		if(plan === "basic"){
+			const planBasic = await pool.query('UPDATE usuarios SET pagoConfirmado = 1 WHERE email = ?', [email])
+		}
 		res.status(200).json('usuario creado');
 
 		//  PaymentInstance.getSubscriptionLink(req, res);
@@ -304,27 +345,10 @@ const postUsuario = async (req, res = response) => {
 //ruta de agradecimiento despues del pago
 
 const gracias = (req, res) => {
-	res.send('gracias por la compra');
+	res.sendFile(path.join(__dirname, '..','../client/dist/gracias.html'));
 };
 
-//ruta de los webhook de mercado pago para guardar el estado a aprobado
-// const receiveWebhook = async(req, res)=>{
-//     try {
-//         const payment = req.query;
-//         console.log(payment);
-//         if (payment.type === "payment") {
-//           const data = await mercadopage.payment.findById(payment["data.id"]);
-//           console.log(data);
-//         }
 
-//         res.sendStatus(204);
-//       } catch (error) {
-//         console.log(error);
-//         return res.status(500).json({ message: "Something goes wrong" });
-//       }
-// };
-
-// ruta confirmar pago
 const confimarPago = async (req, res) => {
 	const emailAdmin = req.email;
 
@@ -503,10 +527,42 @@ const activarCuenta = async (req, res) => {
 	}
 };
 
+//mandar mail para recuperar clave
+const recuperarClave = async (req, res) => {
+	const { email } = req.body;
+	
+
+	const query = 'SELECT * FROM usuarios WHERE email = ?';
+
+	try {
+		const emailRecuperar = await pool.query(query, [email]);
+		const mail = emailRecuperar[0][0];
+		const correo = mail.email;
+		console.log(correo);
+		if (emailRecuperar.length === 0) {
+			return res
+				.status(404)
+				.json({ message: 'Correo electrónico no encontrado.' });
+		}
+		//generar token
+		const token = await generarJWTPassword(correo);
+
+		nuevaPassword(token, correo);
+		res.status(200).json({
+			message:
+				' Se ha enviado una emails con los pasos seguir para actualizar la clave'
+		});
+	} catch (error) {
+		console.log(error);
+		res.status(500).json('error al mandar mail');
+	}
+};
+
 //actualizar clave
 
 const newPassword = async (req, res) => {
-	const { email, password } = req.body;
+	const email= req.email;
+	const { password } = req.body;
 
 	const query = 'UPDATE usuarios SET password = ? WHERE email = ?';
 
@@ -514,11 +570,9 @@ const newPassword = async (req, res) => {
 		const result = await pool.query(query, [email, password]);
 
 		if (result.length === 0) {
-			return res.status(404).json({ message: 'Usuario no encontrado' });
+			return res.status(404).json({ msg: 'Usuario no encontrado' });
 		} else {
-			res.send(
-				`la clave del usuario ${result[0][0].storeName} a sido actualizada`
-			);
+			res.status(200).json({ msg: 'ok' });
 		}
 	} catch (error) {
 		console.log(error);
@@ -687,31 +741,7 @@ const mostrarPlanes = async (req, res) => {
 	}
 };
 
-//mandar mail para recuperar clave
-const recuperarClave = async (req, res) => {
-	const { email } = req.body;
-	const query = 'SELECT * FROM usuarios WHERE email = ?';
 
-	try {
-		const emailRecuperar = await pool.query(query, [email]);
-		const mail = emailRecuperar[0][0];
-		const correo = mail.email;
-		console.log(correo);
-		if (emailRecuperar.length === 0) {
-			return res
-				.status(404)
-				.json({ message: 'Correo electrónico no encontrado.' });
-		}
-		sendEmail(correo);
-		res.status(200).json({
-			message:
-				' Se ha enviado una emails con los pasos seguir para actualizar la clave'
-		});
-	} catch (error) {
-		console.log(error);
-		res.status(500).json('error al mandar mail');
-	}
-};
 
 //actualizar imagen admin
 const cambiarImagenAdmin = async (req, res) => {
@@ -809,13 +839,26 @@ const getChatLocal = async (req, res) => {
 	}
 };
 
-const cancelarPlan = (req, res) => {
+const cancelarPlan = async (req, res) => {
 	const email = req.email;
-	cancelarsuscripcion(email);
 
-	res.status(200).json({
-		msg: 'mensaje enviado al administrado, tu plan se dara de baja'
-	});
+	const query = 'UPDATE usuarios SET status = false WHERE email = ?';
+
+	try {
+		const result = await pool.query(query, [email]);
+
+		if (result.length === 0) {
+			return res.status(404).json({ message: 'Usuario no encontrado' });
+		} else {
+			cancelarsuscripcion(email);
+			res.json(`ok`);
+		}
+	} catch (error) {
+		console.log(error);
+		res.status(500).send('error en la suspencion de cuenta');
+	}
+
+	
 };
 
 module.exports = {
@@ -847,5 +890,7 @@ module.exports = {
 	cambiarImagenLocal,
 	mostrarUsuarioConfirmarPlan,
 	getChatLocal,
-	cancelarPlan
+	cancelarPlan,
+	postEmailExistenteAdmin,
+	postEmailExistentelocal
 };

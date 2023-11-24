@@ -9,10 +9,11 @@ export default function FirstView() {
 			<div className="fv-container">
 				<div className="fv-text">
 					<div className="fv-title">
-						<h2>Servicio</h2>
-						<h2>impecable para</h2>
-						<h2>clientes</h2>
-						<h2>satisfechos</h2>
+					
+						<h1>El mesero virtual</h1>
+						<h2>que suma agilidad</h2>
+						<h2>y ganancias</h2>
+						<h2>a tu salón</h2>
 					</div>
 					<div>
 						<p>
